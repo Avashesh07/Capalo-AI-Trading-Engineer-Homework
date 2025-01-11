@@ -207,23 +207,6 @@ def solve_and_display(n_assets, n_markets, n_timesteps,
     \text{up\_aux}_{i,T_{\text{final}}} \le \text{SOC}_{i,T_{\text{final}}} - \text{minSOC}.
     """)
 
-
-    # -------------------------------
-    #   Check number of x vars
-    # -------------------------------
-    num_x_vars = len(model.x)
-    expected_x_vars = n_timesteps * n_markets
-
-    # Display the decision variable count check
-    st.subheader("Decision Variable Count Check")
-    st.write(f"Number of `x[t,m]` variables in `model.x`: **{num_x_vars}**")
-    st.write(f"Expected number of `x[t,m]` variables: **{expected_x_vars}**")
-
-    if num_x_vars == expected_x_vars:
-        st.success("The number of x[t,m] variables matches n_timesteps * n_markets.")
-    else:
-        st.warning("WARNING: The number of x[t,m] variables does NOT match n_timesteps * n_markets.")
-
     # -------------------------------
     #  CREATE MODEL
     # -------------------------------
@@ -255,6 +238,22 @@ def solve_and_display(n_assets, n_markets, n_timesteps,
         )
     model.Obj = Objective(rule=obj_rule, sense=maximize)
 
+    # -------------------------------
+    #   Check number of x vars
+    # -------------------------------
+    num_x_vars = len(model.x)
+    expected_x_vars = n_timesteps * n_markets
+
+    # Display the decision variable count check
+    st.subheader("Decision Variable Count Check")
+    st.write(f"Number of `x[t,m]` variables in `model.x`: **{num_x_vars}**")
+    st.write(f"Expected number of `x[t,m]` variables: **{expected_x_vars}**")
+
+    if num_x_vars == expected_x_vars:
+        st.success("The number of x[t,m] variables matches n_timesteps * n_markets.")
+    else:
+        st.warning("WARNING: The number of x[t,m] variables does NOT match n_timesteps * n_markets.")
+        
     # ---------------------------------------------------
     #   CONSTRAINTS
     # ---------------------------------------------------
