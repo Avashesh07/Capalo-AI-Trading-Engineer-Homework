@@ -402,6 +402,21 @@ def solve_and_display(n_assets, n_markets, n_timesteps,
     else:
         st.write("All bids are 0.")
 
+    # Display SOC values for all assets and timesteps
+    st.subheader("SOC Evolution for All Assets and Timesteps (MWh)")
+    soc_values = []
+    for i in model.ASSETS:
+        for tt in model.TIME:
+            soc_values.append({
+                "Asset": i,
+                "Datetime": tt,
+                "SOC (MWh)": round(model.SOC[i, tt].value, 3)
+            })
+
+    # Display SOC values as a dataframe
+    st.dataframe(pd.DataFrame(soc_values))
+
+
     # Display final state of charge per asset
     st.subheader("Final State of Charge per Asset (MWh)")
     soc_summary = []
@@ -415,6 +430,7 @@ def solve_and_display(n_assets, n_markets, n_timesteps,
         )
         soc_summary.append({"Asset": i, "Final SOC (MWh)": round(final_soc, 3)})
     st.table(pd.DataFrame(soc_summary))
+
 
     # -------------------------------
     # Create figures using Plotly
