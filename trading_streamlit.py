@@ -129,7 +129,7 @@ def solve_and_display(n_assets, n_markets, n_timesteps,
     st.latex(r"""
     x_{t,m} \geq 0 \quad \forall \, t \in T, \, m \in M.
     """)
-    st.latex("This represents the power allocated to market \(m\) at time \(t\).")
+    st.markdown("This represents the power allocated to market `m` at time `t`.")
 
     # 2. Auxiliary Variables
     st.markdown("2. **Auxiliary Variables:**")
@@ -141,10 +141,10 @@ def solve_and_display(n_assets, n_markets, n_timesteps,
     \end{aligned}
     """)
 
-    st.latex("""
-    - \( \text{SOC}_{i,t} \): State of charge of asset \(i\) at time \(t\).
-    - \( \text{up\_aux}_{i,t} \): Auxiliary variable for discharge by asset \(i\) at time \(t\).
-    - \( \text{down\_aux}_{i,t} \): Auxiliary variable for charge by asset \(i\) at time \(t\).
+    st.markdown("""
+    - \( \text{SOC}_{i,t} \): State of charge of asset `i` at time `t`.
+    - \( \text{up\_aux}_{i,t} \): Auxiliary variable for discharge by asset `i` at time `t`.
+    - \( \text{down\_aux}_{i,t} \): Auxiliary variable for charge by asset `i` at time `t`.
     """)
 
     # 3. Binary Variables
