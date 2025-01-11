@@ -129,7 +129,9 @@ def solve_and_display(n_assets, n_markets, n_timesteps,
     st.latex(r"""
     x_{t,m} \geq 0 \quad \forall \, t \in T, \, m \in M.
     """)
-    st.markdown("This represents the power allocated to market `m` at time `t`.")
+    st.markdown("""
+    This represents the power allocated to market $m$ at time $t$:
+    """)
 
     # 2. Auxiliary Variables
     st.markdown("2. **Auxiliary Variables:**")
@@ -141,10 +143,12 @@ def solve_and_display(n_assets, n_markets, n_timesteps,
     \end{aligned}
     """)
 
+    # Auxiliary variables explanation
     st.markdown("""
-    - \( \text{SOC}_{i,t} \): State of charge of asset `i` at time `t`.
-    - \( \text{up\_aux}_{i,t} \): Auxiliary variable for discharge by asset `i` at time `t`.
-    - \( \text{down\_aux}_{i,t} \): Auxiliary variable for charge by asset `i` at time `t`.
+    **Auxiliary Variables:**
+    - $ \text{SOC}_{i,t} $: State of charge of asset $i$ at time $t$.
+    - $ \text{up\_aux}_{i,t} $: Auxiliary variable for discharge by asset $i$ at time $t$.
+    - $ \text{down\_aux}_{i,t} $: Auxiliary variable for charge by asset $i$ at time $t$.
     """)
 
     # 3. Binary Variables
@@ -155,9 +159,11 @@ def solve_and_display(n_assets, n_markets, n_timesteps,
     & \text{use\_charge}_{i,t} \in \{0, 1\} && \quad \forall \, i \in A, \, t \in T.
     \end{aligned}
     """)
-    st.latex("""
-    - \( \text{use\_discharge}_{i,t} \): Indicates whether asset \(i\) is discharging at time \(t\).
-    - \( \text{use\_charge}_{i,t} \): Indicates whether asset \(i\) is charging at time \(t\).
+    # Binary variables explanation
+    st.markdown("""
+    **Binary Variables:**
+    - $ \text{use\_discharge}_{i,t} $: Indicates whether asset $i$ is discharging at time $t$.
+    - $ \text{use\_charge}_{i,t} $: Indicates whether asset $i$ is charging at time $t$.
     """)
 
 
@@ -166,11 +172,12 @@ def solve_and_display(n_assets, n_markets, n_timesteps,
     st.latex(r"""
     \max \sum_{t \in T} \sum_{m \in M} \bigl[\text{dir}(m) \cdot p_{t,m} \bigr] \cdot x_{t,m}
     """)
-    st.latex(r"""
-    where:
-    - \(\text{dir}(m) \in \{+1, -1\}\) depending on the market direction (up or down),
-    - \(p_{t,m}\) is the price for market \(m\) at time \(t\).
+    st.markdown(r"""
+    **Where:**
+    - $\text{dir}(m) \in \{+1, -1\}$ depending on the market direction (up or down).
+    - $p_{t,m}$ is the price for market $m$ at time $t$.
     """)
+
 
     # Constraints
     st.markdown("**Constraints:**")
