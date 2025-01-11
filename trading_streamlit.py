@@ -146,9 +146,9 @@ def solve_and_display(n_assets, n_markets, n_timesteps,
     # Auxiliary variables explanation
     st.markdown("""
     **Auxiliary Variables:**
-    - $ \text{SOC}_{i,t} $: State of charge of asset $i$ at time $t$.
-    - $ \text{up\_aux}_{i,t} $: Auxiliary variable for discharge by asset $i$ at time $t$.
-    - $ \text{down\_aux}_{i,t} $: Auxiliary variable for charge by asset $i$ at time $t$.
+    - $ {SOC}_{i,t} $: State of charge of asset $i$ at time $t$.
+    - $ {up\_aux}_{i,t} $: Auxiliary variable for discharge by asset $i$ at time $t$.
+    - $ {down\_aux}_{i,t} $: Auxiliary variable for charge by asset $i$ at time $t$.
     """)
 
     # 3. Binary Variables
@@ -162,8 +162,8 @@ def solve_and_display(n_assets, n_markets, n_timesteps,
     # Binary variables explanation
     st.markdown("""
     **Binary Variables:**
-    - $ \text{use\_discharge}_{i,t} $: Indicates whether asset $i$ is discharging at time $t$.
-    - $ \text{use\_charge}_{i,t} $: Indicates whether asset $i$ is charging at time $t$.
+    - $ {use\_discharge}_{i,t} $: Indicates whether asset $i$ is discharging at time $t$.
+    - $ {use\_charge}_{i,t} $: Indicates whether asset $i$ is charging at time $t$.
     """)
 
 
@@ -174,7 +174,7 @@ def solve_and_display(n_assets, n_markets, n_timesteps,
     """)
     st.markdown(r"""
     **Where:**
-    - $\text{dir}(m) \in \{+1, -1\}$ depending on the market direction (up or down).
+    - ${dir}(m) \in \{+1, -1\}$ depending on the market direction (up or down).
     - $p_{t,m}$ is the price for market $m$ at time $t$.
     """)
 
