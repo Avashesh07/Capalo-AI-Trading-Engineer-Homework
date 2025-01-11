@@ -40,15 +40,19 @@ def main():
         "Asset energy capacity (MWh)", min_value=1, value=20, step=1
     )
 
+    initial_soc_percentage = st.sidebar.slider(
+        "Initial SOC Percentage (as a fraction of capacity)", min_value=0.0, max_value=1.0, value=0.5, step=0.01
+    )
+
     # Solve button
     if st.sidebar.button("Solve"):
         solve_and_display(
             n_assets, n_markets, n_timesteps,
-            asset_power_capacity, asset_energy_capacity
+            asset_power_capacity, asset_energy_capacity, initial_soc_percentage
         )
 
 def solve_and_display(n_assets, n_markets, n_timesteps,
-                      asset_power_capacity, asset_energy_capacity):
+                      asset_power_capacity, asset_energy_capacity, initial_soc_percentage):
     """
     Builds and solves the Pyomo model, then displays results in Streamlit.
     """
@@ -229,14 +233,8 @@ def solve_and_display(n_assets, n_markets, n_timesteps,
     \text{SOC}_{i,t+1} = \text{SOC}_{i,t} + \text{down\_aux}_{i,t} - \text{up\_aux}_{i,t}.
     """)
 
-    # (G) Initial SOC
-    st.markdown("7. **Initial SOC:**")
-    st.latex(r"""
-    \text{SOC}_{i,t_0} = 0.5 \cdot \text{Capacity}.
-    """)
-
-    # (H) Minimum SOC at Final Timestep
-    st.markdown("8. **Minimum SOC at Final Timestep:**")
+    # (G) Minimum SOC at Final Timestep
+    st.markdown("7. **Minimum SOC at Final Timestep:**")
     st.latex(r"""
     \text{up\_aux}_{i,T_{\text{final}}} \le \text{SOC}_{i,T_{\text{final}}} - \text{minSOC}.
     """)
@@ -364,9 +362,9 @@ def solve_and_display(n_assets, n_markets, n_timesteps,
                 model.SOC[i, t_next] == model.SOC[i, t] + model.down_aux[i, t] - model.up_aux[i, t]
             )
 
-    # Initial SOC at 50%
+    # Replace initial_soc_rule with user-defined percentage
     def initial_soc_rule(m, i):
-        return m.SOC[i, timesteps[0]] == asset_energy_capacity * 0.5
+        return m.SOC[i, timesteps[0]] == asset_energy_capacity * initial_soc_percentage
     model.InitSOC = Constraint(model.ASSETS, rule=initial_soc_rule)
 
     MIN_SOC_PERCENTAGE = 0.1  # 10%
