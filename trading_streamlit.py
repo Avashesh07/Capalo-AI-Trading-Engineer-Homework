@@ -116,85 +116,97 @@ def solve_and_display(n_assets, n_markets, n_timesteps,
         for m in markets
     }
 
-    # -------------------------------
-    #   MATHEMATICAL FORMULATION
-    # -------------------------------
+# -------------------------------
+#   MATHEMATICAL FORMULATION
+# -------------------------------
     st.subheader("Mathematical Formulation")
+
+    # Decision Variables
+    st.markdown("**Decision Variables:**")
     st.latex(r"""
-\[
-\textbf{Decision Variables:} 
-\begin{aligned}
-& x_{t,m} \ge 0  && \quad \forall \, t \in T, \, m \in M, \\
-& \text{SOC}_{i,t} \ge 0 && \quad \forall \, i \in A, \, t \in T, \\
-& \text{use\_discharge}_{i,t} \in \{0, 1\} && \quad \forall \, i \in A, \, t \in T, \\
-& \text{use\_charge}_{i,t} \in \{0, 1\} && \quad \forall \, i \in A, \, t \in T, \\
-& \text{up\_aux}_{i,t} \ge 0 && \quad \forall \, i \in A, \, t \in T, \\
-& \text{down\_aux}_{i,t} \ge 0 && \quad \forall \, i \in A, \, t \in T. \\
-\end{aligned}
-\]
+    \begin{aligned}
+    & x_{t,m} \ge 0  && \quad \forall \, t \in T, \, m \in M, \\
+    & \text{SOC}_{i,t} \ge 0 && \quad \forall \, i \in A, \, t \in T, \\
+    & \text{use\_discharge}_{i,t} \in \{0, 1\} && \quad \forall \, i \in A, \, t \in T, \\
+    & \text{use\_charge}_{i,t} \in \{0, 1\} && \quad \forall \, i \in A, \, t \in T, \\
+    & \text{up\_aux}_{i,t} \ge 0 && \quad \forall \, i \in A, \, t \in T, \\
+    & \text{down\_aux}_{i,t} \ge 0 && \quad \forall \, i \in A, \, t \in T. \\
+    \end{aligned}
+    """)
 
-\[
-\textbf{Objective:} \quad 
-\max \sum_{t \in T} \sum_{m \in M} \bigl[\text{dir}(m) \cdot p_{t,m} \bigr] \cdot x_{t,m}
-\]
-where \(\text{dir}(m)\in \{+1, -1\}\) (depending on whether the market is up or down),
-and \(p_{t,m}\) is the price for market \(m\) at time \(t\).
+    # Objective Function
+    st.markdown("**Objective:** Maximize total revenue")
+    st.latex(r"""
+    \max \sum_{t \in T} \sum_{m \in M} \bigl[\text{dir}(m) \cdot p_{t,m} \bigr] \cdot x_{t,m}
+    """)
+    st.markdown(r"""
+    where:
+    - \(\text{dir}(m) \in \{+1, -1\}\) depending on the market direction (up or down),
+    - \(p_{t,m}\) is the price for market \(m\) at time \(t\).
+    """)
 
-\[
-\textbf{Constraints:}
-\]
-- **(A) Fleet Prequalification**  
-  \[
+    # Constraints
+    st.markdown("**Constraints:**")
+
+    # (A) Fleet Prequalification
+    st.markdown("1. **Fleet Prequalification:**")
+    st.latex(r"""
     x_{t,m} \;\le\; \sum_{i \in A} \text{PrequalPower}_{i,m}
     \quad \forall t,m.
-  \]
+    """)
 
-- **(B) Per-Asset Power Limit**  
-  \[
+    # (B) Per-Asset Power Limit
+    st.markdown("2. **Per-Asset Power Limit:**")
+    st.latex(r"""
     \sum_{m \in M : \text{dir}(m)=+1} x_{t,m} \;\le\; \text{PowerCapacity}, 
     \quad
     \sum_{m \in M : \text{dir}(m)=-1} x_{t,m} \;\le\; \text{PowerCapacity}
     \quad \forall i,t.
-  \]
+    """)
 
-- **(C) up\_aux and down\_aux Bounds**  
-  \[
+    # (C) up_aux and down_aux Bounds
+    st.markdown("3. **Auxiliary Variable Bounds:**")
+    st.latex(r"""
     \begin{aligned}
     &\text{up\_aux}_{i,t} \le \text{SOC}_{i,t}, && 
         \text{up\_aux}_{i,t} \le \text{BIGM} \cdot \text{use\_discharge}_{i,t}, \\
     &\text{down\_aux}_{i,t} \le (\text{Capacity} - \text{SOC}_{i,t}), &&
         \text{down\_aux}_{i,t} \le \text{BIGM} \cdot \text{use\_charge}_{i,t}.
     \end{aligned}
-  \]
+    """)
 
-- **(D) Summation of up\_aux and down\_aux**  
-  \[
+    # (D) Summation of up_aux and down_aux
+    st.markdown("4. **Summation of Auxiliary Variables:**")
+    st.latex(r"""
     \sum_{m : \text{dir}(m)=+1} x_{t,m} \;=\; \sum_{i} \text{up\_aux}_{i,t}, \qquad
     \sum_{m : \text{dir}(m)=-1} x_{t,m} \;=\; \sum_{i} \text{down\_aux}_{i,t}.
-  \]
+    """)
 
-- **(E) No Simultaneous Charge and Discharge**  
-  \[
+    # (E) No Simultaneous Charge and Discharge
+    st.markdown("5. **No Simultaneous Charge and Discharge:**")
+    st.latex(r"""
     \text{use\_discharge}_{i,t} + \text{use\_charge}_{i,t} \le 1 
     \quad \forall i,t.
-  \]
-
-- **(F) SOC Transition**  
-  \[
-    \text{SOC}_{i,t+1} = \text{SOC}_{i,t} + \text{down\_aux}_{i,t} - \text{up\_aux}_{i,t}.
-  \]
-
-- **(G) Initial SOC**  
-  \[
-    \text{SOC}_{i,t_0} = 0.5 \cdot \text{Capacity}.
-  \]
-
-- **(H) Minimum SOC at Final Timestep**  
-  \[
-    \text{up\_aux}_{i,T_{\text{final}}} \le \text{SOC}_{i,T_{\text{final}}} - \text{minSOC}.
-  \]
-
     """)
+
+    # (F) SOC Transition
+    st.markdown("6. **State of Charge (SOC) Transition:**")
+    st.latex(r"""
+    \text{SOC}_{i,t+1} = \text{SOC}_{i,t} + \text{down\_aux}_{i,t} - \text{up\_aux}_{i,t}.
+    """)
+
+    # (G) Initial SOC
+    st.markdown("7. **Initial SOC:**")
+    st.latex(r"""
+    \text{SOC}_{i,t_0} = 0.5 \cdot \text{Capacity}.
+    """)
+
+    # (H) Minimum SOC at Final Timestep
+    st.markdown("8. **Minimum SOC at Final Timestep:**")
+    st.latex(r"""
+    \text{up\_aux}_{i,T_{\text{final}}} \le \text{SOC}_{i,T_{\text{final}}} - \text{minSOC}.
+    """)
+
 
     # -------------------------------
     #   Check number of x vars
