@@ -121,25 +121,52 @@ def solve_and_display(n_assets, n_markets, n_timesteps,
 # -------------------------------
     st.subheader("Mathematical Formulation")
 
-    # Decision Variables
-    st.markdown("**Decision Variables:**")
+    # Variables
+    st.markdown("**Variables:**")
+
+    # 1. Primary Decision Variable
+    st.markdown("1. **Primary Decision Variable:**")
+    st.latex(r"""
+    x_{t,m} \geq 0 \quad \forall \, t \in T, \, m \in M.
+    """)
+    st.latex("This represents the power allocated to market \(m\) at time \(t\).")
+
+    # 2. Auxiliary Variables
+    st.markdown("2. **Auxiliary Variables:**")
     st.latex(r"""
     \begin{aligned}
-    & x_{t,m} \ge 0  && \quad \forall \, t \in T, \, m \in M, \\
-    & \text{SOC}_{i,t} \ge 0 && \quad \forall \, i \in A, \, t \in T, \\
-    & \text{use\_discharge}_{i,t} \in \{0, 1\} && \quad \forall \, i \in A, \, t \in T, \\
-    & \text{use\_charge}_{i,t} \in \{0, 1\} && \quad \forall \, i \in A, \, t \in T, \\
-    & \text{up\_aux}_{i,t} \ge 0 && \quad \forall \, i \in A, \, t \in T, \\
-    & \text{down\_aux}_{i,t} \ge 0 && \quad \forall \, i \in A, \, t \in T. \\
+    & \text{SOC}_{i,t} \geq 0 && \quad \forall \, i \in A, \, t \in T, \\
+    & \text{up\_aux}_{i,t} \geq 0 && \quad \forall \, i \in A, \, t \in T, \\
+    & \text{down\_aux}_{i,t} \geq 0 && \quad \forall \, i \in A, \, t \in T.
     \end{aligned}
     """)
+
+    st.latex("""
+    - \( \text{SOC}_{i,t} \): State of charge of asset \(i\) at time \(t\).
+    - \( \text{up\_aux}_{i,t} \): Auxiliary variable for discharge by asset \(i\) at time \(t\).
+    - \( \text{down\_aux}_{i,t} \): Auxiliary variable for charge by asset \(i\) at time \(t\).
+    """)
+
+    # 3. Binary Variables
+    st.markdown("3. **Binary Variables:**")
+    st.latex(r"""
+    \begin{aligned}
+    & \text{use\_discharge}_{i,t} \in \{0, 1\} && \quad \forall \, i \in A, \, t \in T, \\
+    & \text{use\_charge}_{i,t} \in \{0, 1\} && \quad \forall \, i \in A, \, t \in T.
+    \end{aligned}
+    """)
+    st.latex("""
+    - \( \text{use\_discharge}_{i,t} \): Indicates whether asset \(i\) is discharging at time \(t\).
+    - \( \text{use\_charge}_{i,t} \): Indicates whether asset \(i\) is charging at time \(t\).
+    """)
+
 
     # Objective Function
     st.markdown("**Objective:** Maximize total revenue")
     st.latex(r"""
     \max \sum_{t \in T} \sum_{m \in M} \bigl[\text{dir}(m) \cdot p_{t,m} \bigr] \cdot x_{t,m}
     """)
-    st.markdown(r"""
+    st.latex(r"""
     where:
     - \(\text{dir}(m) \in \{+1, -1\}\) depending on the market direction (up or down),
     - \(p_{t,m}\) is the price for market \(m\) at time \(t\).
@@ -253,7 +280,7 @@ def solve_and_display(n_assets, n_markets, n_timesteps,
         st.success("The number of x[t,m] variables matches n_timesteps * n_markets.")
     else:
         st.warning("WARNING: The number of x[t,m] variables does NOT match n_timesteps * n_markets.")
-        
+
     # ---------------------------------------------------
     #   CONSTRAINTS
     # ---------------------------------------------------
