@@ -64,7 +64,6 @@ def solve_and_display(n_assets, n_markets, n_timesteps,
         start="2025-01-01 00:00+00:00", periods=n_timesteps, freq="1H"
     )
 
-    # Prequalified powers
     prequalified_powers = np.random.randint(
         0, asset_power_capacity, size=(len(assets), len(markets))
     )
@@ -76,7 +75,6 @@ def solve_and_display(n_assets, n_markets, n_timesteps,
     prequalified_powers.index.name = "asset_id"
     prequalified_powers.columns.name = "market"
 
-    # Market prices
     market_prices = np.random.rand(len(timesteps), len(markets)).round(4) * 100
     market_prices = pd.DataFrame(
         columns=markets,
@@ -86,6 +84,32 @@ def solve_and_display(n_assets, n_markets, n_timesteps,
     market_prices.index.name = "datetime"
     market_prices.columns.name = "market"
 
+    # Streamlit output for the random directions
+    st.subheader("Market Directions")
+    directions_text = ", ".join(directions)
+    st.write(f"Directions chosen (up or down) for each market: {directions_text}")
+
+    # Markets
+    st.subheader("Markets")
+    st.write(", ".join(markets))
+
+    # Assets
+    st.subheader("Assets")
+    st.write(", ".join(assets))
+
+    # Timesteps
+    st.subheader("Timesteps")
+    formatted_timesteps = timesteps.strftime('%Y-%m-%d %H:%M')
+    st.write(", ".join(formatted_timesteps))
+
+    # Prequalified powers
+    st.subheader("Prequalified Powers (MW)")
+    st.dataframe(prequalified_powers)
+
+    # Market prices
+    st.subheader("Market Prices (EUR/MW)")
+    st.dataframe(market_prices)
+
     # direction_sign
     direction_sign = {
         m: 1 if "_up" in m else -1
@@ -93,127 +117,10 @@ def solve_and_display(n_assets, n_markets, n_timesteps,
     }
 
     # -------------------------------
-    #  CREATE MODEL
-    # -------------------------------
-    model = ConcreteModel("FleetWithExactBidVars")
-
-    # 1) Sets
-    model.TIME = Set(initialize=list(timesteps))
-    model.MARKETS = Set(initialize=markets)
-    model.ASSETS = Set(initialize=assets)
-
-    # 2) Fleet-level decision variables: x[t,m]
-    model.x = Var(model.TIME, model.MARKETS, domain=NonNegativeReals)
-
-    # 3) SOC, up_aux, down_aux, and binary usage flags
-    model.SOC = Var(
-        model.ASSETS, model.TIME, domain=NonNegativeReals,
-        bounds=(0, asset_energy_capacity)
-    )
-    model.use_discharge = Var(model.ASSETS, model.TIME, domain=Binary)
-    model.use_charge = Var(model.ASSETS, model.TIME, domain=Binary)
-    model.up_aux = Var(model.ASSETS, model.TIME, domain=NonNegativeReals)
-    model.down_aux = Var(model.ASSETS, model.TIME, domain=NonNegativeReals)
-
-    # 4) Objective: Maximize total revenue
-    def obj_rule(m):
-        return sum(
-            direction_sign[mm] * market_prices.loc[tt, mm] * m.x[tt, mm]
-            for tt in m.TIME
-            for mm in m.MARKETS
-        )
-    model.Obj = Objective(rule=obj_rule, sense=maximize)
-
-    # ---------------------------------------------------
-    #   CONSTRAINTS
-    # ---------------------------------------------------
-    BIGM = asset_energy_capacity
-
-    # (A) The total x[t,m] cannot exceed the sum of prequalified powers
-    def fleet_prequalification_rule(m, tt, mm):
-        sum_of_prequal = sum(prequalified_powers.loc[a, mm] for a in assets)
-        return m.x[tt, mm] <= sum_of_prequal
-    model.FleetPrequalConstraint = Constraint(
-        model.TIME, model.MARKETS, rule=fleet_prequalification_rule
-    )
-
-    # (B) Each asset i must be able to handle the entire up or down portion
-    def asset_discharge_rule(m, i, tt):
-        up_sum = sum(m.x[tt, mm] for mm in m.MARKETS if direction_sign[mm] == 1)
-        return up_sum <= asset_power_capacity
-    model.AssetDischargeConstraint = Constraint(
-        model.ASSETS, model.TIME, rule=asset_discharge_rule
-    )
-
-    def asset_charge_rule(m, i, tt):
-        down_sum = sum(m.x[tt, mm] for mm in m.MARKETS if direction_sign[mm] == -1)
-        return down_sum <= asset_power_capacity
-    model.AssetChargeConstraint = Constraint(
-        model.ASSETS, model.TIME, rule=asset_charge_rule
-    )
-
-    # (C) Link up_aux/down_aux to usage flags
-    model.UpAuxBounds = ConstraintList()
-    for i in assets:
-        for tt in model.TIME:
-            model.UpAuxBounds.add(model.up_aux[i, tt] <= model.SOC[i, tt])
-            model.UpAuxBounds.add(model.up_aux[i, tt] <= BIGM * model.use_discharge[i, tt])
-
-    model.DownAuxBounds = ConstraintList()
-    for i in assets:
-        for tt in model.TIME:
-            model.DownAuxBounds.add(model.down_aux[i, tt] <= asset_energy_capacity - model.SOC[i, tt])
-            model.DownAuxBounds.add(model.down_aux[i, tt] <= BIGM * model.use_charge[i, tt])
-
-    # (D) Sum of up_aux and down_aux across assets must match total up or down
-    def up_sum_rule(m, tt):
-        up_sum_ = sum(m.x[tt, mm] for mm in m.MARKETS if direction_sign[mm] == 1)
-        return up_sum_ == sum(m.up_aux[i, tt] for i in assets)
-    model.UpSumConstraint = Constraint(model.TIME, rule=up_sum_rule)
-
-    def down_sum_rule(m, tt):
-        down_sum_ = sum(m.x[tt, mm] for mm in m.MARKETS if direction_sign[mm] == -1)
-        return down_sum_ == sum(m.down_aux[i, tt] for i in assets)
-    model.DownSumConstraint = Constraint(model.TIME, rule=down_sum_rule)
-
-    # (E) No simultaneous charge/discharge
-    model.NoSimultaneousChargeDischarge = ConstraintList()
-    for i in assets:
-        for tt in model.TIME:
-            model.NoSimultaneousChargeDischarge.add(
-                model.use_discharge[i, tt] + model.use_charge[i, tt] <= 1
-            )
-
-    # (F) SOC transitions
-    model.SOCTransition = ConstraintList()
-    for i in assets:
-        for idx, t in enumerate(timesteps[:-1]):
-            t_next = timesteps[idx + 1]
-            model.SOCTransition.add(
-                model.SOC[i, t_next] == model.SOC[i, t] + model.down_aux[i, t] - model.up_aux[i, t]
-            )
-
-    # (G) Initial SOC = 50%
-    def initial_soc_rule(m, i):
-        return m.SOC[i, timesteps[0]] == asset_energy_capacity * 0.5
-    model.InitSOC = Constraint(model.ASSETS, rule=initial_soc_rule)
-
-    # (H) Minimum SOC reserve
-    MIN_SOC_PERCENTAGE = 0.1
-    MIN_SOC = asset_energy_capacity * MIN_SOC_PERCENTAGE
-
-    def prevent_discharge_below_min_soc_rule(m, i):
-        final_timestep = timesteps[-1]
-        return m.up_aux[i, final_timestep] <= m.SOC[i, final_timestep] - MIN_SOC
-    model.PreventDischargeBelowMinSOC = Constraint(
-        model.ASSETS, rule=prevent_discharge_below_min_soc_rule
-    )
-
-    # -------------------------------
     #   MATHEMATICAL FORMULATION
     # -------------------------------
     st.subheader("Mathematical Formulation")
-    st.markdown(r"""
+    st.latex(r"""
 \[
 \textbf{Decision Variables:} 
 \begin{aligned}
@@ -306,8 +213,129 @@ and \(p_{t,m}\) is the price for market \(m\) at time \(t\).
         st.warning("WARNING: The number of x[t,m] variables does NOT match n_timesteps * n_markets.")
 
     # -------------------------------
-    #   Solve
+    #  CREATE MODEL
     # -------------------------------
+    model = ConcreteModel("FleetWithExactBidVars")
+
+    # 1) Sets
+    model.TIME = Set(initialize=list(timesteps))
+    model.MARKETS = Set(initialize=markets)
+    model.ASSETS = Set(initialize=assets)
+
+    # 2) Fleet-level decision variables: x[t,m]
+    model.x = Var(model.TIME, model.MARKETS, domain=NonNegativeReals)
+
+    # 3) We STILL need each asset's SOC as an auxiliary variable
+    model.SOC = Var(
+        model.ASSETS, model.TIME, domain=NonNegativeReals,
+        bounds=(0, asset_energy_capacity)
+    )
+
+    model.use_discharge = Var(model.ASSETS, model.TIME, domain=Binary)
+    model.use_charge = Var(model.ASSETS, model.TIME, domain=Binary)
+
+    # 4) Objective: Maximize total revenue
+    def obj_rule(m):
+        return sum(
+            direction_sign[mm] * market_prices.loc[tt, mm] * m.x[tt, mm]
+            for tt in m.TIME
+            for mm in m.MARKETS
+        )
+    model.Obj = Objective(rule=obj_rule, sense=maximize)
+
+    # ---------------------------------------------------
+    #   CONSTRAINTS
+    # ---------------------------------------------------
+
+    # (A) The total x[t,m] cannot exceed sum of prequalified powers
+    def fleet_prequalification_rule(m, tt, mm):
+        sum_of_prequal = sum(prequalified_powers.loc[a, mm] for a in assets)
+        return m.x[tt, mm] <= sum_of_prequal
+    model.FleetPrequalConstraint = Constraint(
+        model.TIME, model.MARKETS, rule=fleet_prequalification_rule
+    )
+
+    # (B) Each asset i must be able to handle the entire up or down portion
+    def asset_discharge_rule(m, i, tt):
+        up_sum = sum(m.x[tt, mm] for mm in m.MARKETS if direction_sign[mm] == 1)
+        return up_sum <= asset_power_capacity
+    model.AssetDischargeConstraint = Constraint(
+        model.ASSETS, model.TIME, rule=asset_discharge_rule
+    )
+
+    def asset_charge_rule(m, i, tt):
+        down_sum = sum(m.x[tt, mm] for mm in m.MARKETS if direction_sign[mm] == -1)
+        return down_sum <= asset_power_capacity
+    model.AssetChargeConstraint = Constraint(
+        model.ASSETS, model.TIME, rule=asset_charge_rule
+    )
+
+    # (C) SoC constraints
+    BIGM = asset_energy_capacity
+
+    model.up_aux = Var(model.ASSETS, model.TIME, domain=NonNegativeReals)
+    model.down_aux = Var(model.ASSETS, model.TIME, domain=NonNegativeReals)
+
+    # Link up_aux to binary "use_discharge"
+    model.UpAuxBounds = ConstraintList()
+    for i in assets:
+        for tt in model.TIME:
+            model.UpAuxBounds.add(model.up_aux[i, tt] <= model.SOC[i, tt])
+            model.UpAuxBounds.add(model.up_aux[i, tt] <= BIGM * model.use_discharge[i, tt])
+
+    # Link down_aux to binary "use_charge"
+    model.DownAuxBounds = ConstraintList()
+    for i in assets:
+        for tt in model.TIME:
+            model.DownAuxBounds.add(model.down_aux[i, tt] <= asset_energy_capacity - model.SOC[i, tt])
+            model.DownAuxBounds.add(model.down_aux[i, tt] <= BIGM * model.use_charge[i, tt])
+
+    # up_sum == sum of up_aux
+    def up_sum_rule(m, tt):
+        up_sum_ = sum(m.x[tt, mm] for mm in m.MARKETS if direction_sign[mm] == 1)
+        return up_sum_ == sum(m.up_aux[i, tt] for i in assets)
+    model.UpSumConstraint = Constraint(model.TIME, rule=up_sum_rule)
+
+    # down_sum == sum of down_aux
+    def down_sum_rule(m, tt):
+        down_sum_ = sum(m.x[tt, mm] for mm in m.MARKETS if direction_sign[mm] == -1)
+        return down_sum_ == sum(m.down_aux[i, tt] for i in assets)
+    model.DownSumConstraint = Constraint(model.TIME, rule=down_sum_rule)
+
+    # NoSimultaneousChargeDischarge
+    model.NoSimultaneousChargeDischarge = ConstraintList()
+    for i in assets:
+        for tt in model.TIME:
+            model.NoSimultaneousChargeDischarge.add(
+                model.use_discharge[i, tt] + model.use_charge[i, tt] <= 1
+            )
+
+    # SOC transitions
+    model.SOCTransition = ConstraintList()
+    for i in assets:
+        for idx, t in enumerate(timesteps[:-1]):
+            t_next = timesteps[idx + 1]
+            model.SOCTransition.add(
+                model.SOC[i, t_next] == model.SOC[i, t] + model.down_aux[i, t] - model.up_aux[i, t]
+            )
+
+    # Initial SOC at 50%
+    def initial_soc_rule(m, i):
+        return m.SOC[i, timesteps[0]] == asset_energy_capacity * 0.5
+    model.InitSOC = Constraint(model.ASSETS, rule=initial_soc_rule)
+
+    MIN_SOC_PERCENTAGE = 0.1  # 10%
+    MIN_SOC = asset_energy_capacity * MIN_SOC_PERCENTAGE
+
+    # Prevent discharge below 10% at final timestep
+    def prevent_discharge_below_min_soc_rule(m, i):
+        final_timestep = timesteps[-1]
+        return m.up_aux[i, final_timestep] <= m.SOC[i, final_timestep] - MIN_SOC
+    model.PreventDischargeBelowMinSOC = Constraint(
+        model.ASSETS, rule=prevent_discharge_below_min_soc_rule
+    )
+
+    # Solve
     solver = SolverFactory("glpk")
     res = solver.solve(model, tee=False, keepfiles=False)
 
@@ -368,8 +396,7 @@ and \(p_{t,m}\) is the price for market \(m\) at time \(t\).
     soc_fig.update_layout(
         title=dict(
             text="SOC Evolution Over Time",
-            font=dict(size=30, color="darkblue"),
-            x=0.5
+            font=dict(size=30, color="white")
         ),
         xaxis=dict(
             title=dict(text="Time", font=dict(size=16)),
@@ -418,8 +445,7 @@ and \(p_{t,m}\) is the price for market \(m\) at time \(t\).
     bid_fig.update_layout(
         title=dict(
             text="Bid Allocation Over Time",
-            font=dict(size=30, color="darkblue"),
-            x=0.5
+            font=dict(size=30, color="white")
         ),
         xaxis=dict(
             title=dict(text="Time", font=dict(size=16)),
