@@ -300,8 +300,7 @@ def solve_and_display(n_assets, n_markets, n_timesteps,
     soc_fig.update_layout(
         title=dict(
             text="SOC Evolution Over Time",
-            font=dict(size=30, color="darkblue"),
-            x=0.5
+            font=dict(size=30, color="white")
         ),
         xaxis=dict(
             title=dict(text="Time", font=dict(size=16)),
@@ -350,8 +349,7 @@ def solve_and_display(n_assets, n_markets, n_timesteps,
     bid_fig.update_layout(
         title=dict(
             text="Bid Allocation Over Time",
-            font=dict(size=30, color="darkblue"),
-            x=0.5
+            font=dict(size=30, color="white")
         ),
         xaxis=dict(
             title=dict(text="Time", font=dict(size=16)),
