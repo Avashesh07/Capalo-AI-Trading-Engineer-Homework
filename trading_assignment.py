@@ -245,8 +245,7 @@ model.PreventDischargeBelowMinSOC = Constraint(model.ASSETS, rule=prevent_discha
 all_constraints = list(model.component_objects(Constraint, active=True))
 print(f"Total number of active constraints = {sum(1 for _ in all_constraints)}\n")
 
-# If you want a detailed listing, you can do:
-# model.pprint()
+
 
 # -------------------------------
 # SOLVE
